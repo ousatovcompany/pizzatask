@@ -26,7 +26,6 @@ import rx.schedulers.Schedulers;
 
 public class DataManager {
     private static final String TAG = "US";
-    private static final String TAG2 = "USA";
 
     final private String CLIENT_ID = "F3X4K30EJF0ES3LACQ2FRT4QWMJGGRNFRGWCCEWXR2O4HTRG";
     final private String CLIENT_SECRET = "UBVEJPUF0532QUMMBBVQTPNDA5MMUCKJFFHGHQPISUNBLABV";
@@ -47,13 +46,13 @@ public class DataManager {
     }
 
     public ArrayList<FSVenue> getСachedVenue(int number) {
-        Log.d(TAG2, "getСachedVenue!!!");
+        Log.d(TAG, "getСachedVenue!!!");
         ArrayList<FSVenue> list = mStorage.loadData(0, number);
         if (null != list) {
-            Log.d(TAG2, "getСachedVenue list is ok!!!");
+            Log.d(TAG, "getСachedVenue list is ok!!!");
             mCount = list.size();
         }
-        Log.d(TAG2, "getСachedVenue list is null!!!");
+        Log.d(TAG, "getСachedVenue list is null!!!");
         return list;
     }
 
@@ -66,15 +65,15 @@ public class DataManager {
 //    }
 
     public synchronized ArrayList<FSVenue> getNewPage(int number) {
-        Log.d(TAG2, "getNewPage mCount = " + mCount);
+        Log.d(TAG, "getNewPage mCount = " + mCount);
         ArrayList<FSVenue> list = mStorage.loadData(mCount, number);
         if (null != list) {
             mCount += list.size();// - mCount;
             for (int i = 0;i < list.size(); i++) {
-                Log.d(TAG2, "getNewPage i = " + i + " dist = " + list.get(i).getDistance());
+                Log.d(TAG, "getNewPage i = " + i + " dist = " + list.get(i).getDistance());
             }
         }
-        Log.d(TAG2, "getNewPage2 mCount = " + mCount);
+        Log.d(TAG, "getNewPage2 mCount = " + mCount);
         return list;
     }
 
@@ -85,14 +84,14 @@ public class DataManager {
         } else {
             tmp = mCount;
         }
-        Log.d(TAG2, "refresh() start offset = " + tmp + " number = " + number + " tid = " + Thread.currentThread().getId());
+        Log.d(TAG, "refresh() start offset = " + tmp + " number = " + number + " tid = " + Thread.currentThread().getId());
         mFsService.getVenues(CLIENT_ID, CLIENT_SECRET, version, ll, query, tmp, number, SORT_BY_DISTANCE)
                 .subscribeOn(Schedulers.from(AsyncTask.THREAD_POOL_EXECUTOR))
                 .observeOn(Schedulers.from(AsyncTask.THREAD_POOL_EXECUTOR))
                 .subscribe(new Subscriber<JsonObject>() {
                     @Override
                     public void onCompleted() {
-                        Log.d(TAG2, "onCompleted() tid = " + Thread.currentThread().getId());
+                        Log.d(TAG, "onCompleted() tid = " + Thread.currentThread().getId());
                         Log.d(TAG, "mBus.post(new EventUpdateStorage()) !!!!! tid = " + Thread.currentThread().getId());
 
                         mBus.post(new EventUpdateStorage());
@@ -100,13 +99,13 @@ public class DataManager {
 
                     @Override
                     public void onError(Throwable e) {
-                        Log.d(TAG2, "onError() called " + e.getMessage() + " tid = " + Thread.currentThread().getId());
+                        Log.d(TAG, "onError() called " + e.getMessage() + " tid = " + Thread.currentThread().getId());
                         mBus.post(new EventNotUpdateStorage());
                     }
 
                     @Override
                     public void onNext(JsonObject jsonObject) {
-                        Log.d(TAG2, "onNext!!!!! tid = " + Thread.currentThread().getId());
+                        Log.d(TAG, "onNext!!!!! tid = " + Thread.currentThread().getId());
 
                         ArrayList<FSVenue> fsVenues = parseFSresponse(jsonObject);
 
@@ -122,28 +121,17 @@ public class DataManager {
                         }
 
                         if (isFirstRefresh) {
-                            Log.d(TAG2, "isFirstRefresh mCount = " + mCount);
+                            Log.d(TAG, "isFirstRefresh mCount = " + mCount);
                             mStorage.clearTable();
                             mCount = 0;
                         }
                         isFirstRefresh = false;
 
                         mStorage.saveData(fsVenues);
-//                        Gson gs = new Gson();
-//                        String serialize = gs.toJson(fsVenues);
-//
-//                        Type type = new TypeToken<ArrayList<FSVenue>>() {}.getType();
-//                        ArrayList<FSVenue> arrayList = gs.fromJson(serialize, type);
-//                        Log.d(TAG, "PRINT ARRAY !!!!!!!!!!!!! size = " + arrayList.size());
-//                        for (int i = 0; i < arrayList.size(); i++) {
-//                            Log.d(TAG, " i = " + i + " distance = " + arrayList.get(i).getDistance());
-//                        }
-
-
                         //TODO: push event
                     }
                 });
-        Log.d(TAG2, "refresh() end" + " tid = " + Thread.currentThread().getId());
+        Log.d(TAG, "refresh() end" + " tid = " + Thread.currentThread().getId());
     }
 
     private <T> T createRetrofitService(final Class<T> clazz, final String endPoint) {
@@ -193,30 +181,3 @@ public class DataManager {
         return temp;
     }
 }
-
-//        if (response.has("response")) {
-//            Log.d(TAG, "jsonObject.has(\"response\") !!!");
-//            if (response.getAsJsonObject("response").has("venues")) {
-//                JsonArray jsonArray = response.getAsJsonObject("response").getAsJsonArray("venues");
-//                Log.d(TAG, "jsonArray size = " + jsonArray.size());
-//
-//                for (int i = 0; i < jsonArray.size(); i++) {
-//                    FSVenue obj = new FSVenue();
-//                    if (jsonArray.get(i).getAsJsonObject().has("name")) {
-//                        obj.setName(jsonArray.get(i).getAsJsonObject().get("name").getAsString());
-//                        if (jsonArray.get(i).getAsJsonObject().has("location")) {
-//                            if (jsonArray.get(i).getAsJsonObject().getAsJsonObject("location").has("distance")) {
-//                                obj.setDistance(jsonArray.get(i).getAsJsonObject().getAsJsonObject("location").get("distance").getAsInt());
-//                                if (jsonArray.get(i).getAsJsonObject().has("phone")) {
-//                                    obj.getBody().setPhone(jsonArray.get(i).getAsJsonObject().get("phone").getAsString());
-//                                }
-//                                if (jsonArray.get(i).getAsJsonObject().has("url")) {
-//                                    obj.getBody().setUrl(jsonArray.get(i).getAsJsonObject().get("url").getAsString());
-//                                }
-//                                temp.add(obj);
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//        }

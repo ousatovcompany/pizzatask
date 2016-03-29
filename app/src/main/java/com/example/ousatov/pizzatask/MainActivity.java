@@ -1,36 +1,32 @@
 package com.example.ousatov.pizzatask;
 
 import android.app.ListActivity;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AbsListView;
-import android.widget.ArrayAdapter;
+import android.widget.TextView;
 
 import com.example.ousatov.pizzatask.events.EventNotUpdateStorage;
 import com.example.ousatov.pizzatask.events.EventUpdateStorage;
 import com.example.ousatov.pizzatask.venue.FSVenue;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import de.greenrobot.event.EventBus;
 
 
 public class MainActivity extends ListActivity implements AbsListView.OnScrollListener {
     private static final String TAG = "US";
-    private static final String TAG2 = "USA";
-    //    ArrayAdapter<String> myAdapter;
-//    ArrayAdapter<String> myAdapter;
     private FSVenueAdapter mAdapter;
     private EventBus mBus = EventBus.getDefault();
     private ArrayList<FSVenue> mVenuesList = new ArrayList<>();
-
-    private final List<String> mListTitle = new ArrayList<String>();
-
+    private ArrayList<FSVenue> mNewPage;
     private DataManager mDataManager;
     private View mFooterView;
+    private View mHeaderView;
 
     private boolean isUpdated = false;
     // we will need to take the latitude and the logntitude from a certain point
@@ -40,7 +36,7 @@ public class MainActivity extends ListActivity implements AbsListView.OnScrollLi
     private final String v = "20160324";
     private final String query = "pizza";
     private final String ll = latitude + "," + longtitude;
-    private final int PAG_SIZE = 10;
+    private final int PAGE_SIZE = 10;
 
     @Override
     protected void onDestroy() {
@@ -52,106 +48,83 @@ public class MainActivity extends ListActivity implements AbsListView.OnScrollLi
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 //        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         mBus.register(this);
-        Log.d(TAG2, "Started !!!");
+        Log.d(TAG, "Started !!!");
 
         mDataManager = new DataManager(this);
-        mFooterView = LayoutInflater.from(getApplicationContext()).inflate(R.layout.loading_view, null);
+        mFooterView = LayoutInflater.from(getApplicationContext()).inflate(R.layout.footer_view, null);
         getListView().addFooterView(mFooterView, null, false);
+
+        mHeaderView = LayoutInflater.from(getApplicationContext()).inflate(R.layout.header_view, null);
+        getListView().addHeaderView(mHeaderView);
 
         mAdapter = new FSVenueAdapter(MainActivity.this, R.layout.venue_item, mVenuesList);
         setListAdapter(mAdapter);
 
-        mVenuesList.addAll(mDataManager.getСachedVenue(PAG_SIZE));
-        mAdapter.notifyDataSetChanged();
-//        showList();
-        mDataManager.refresh(v, ll, query, PAG_SIZE);
+        mAdapter.addAll(mDataManager.getСachedVenue(PAGE_SIZE));
+//        mAdapter.notifyDataSetChanged();
+        mDataManager.refresh(v, ll, query, PAGE_SIZE);
         mIsLoading = true;
-//        if (null != mVenuesList) {
-//            synchronized (mVenuesList) {
-//
-//                showList();
-//                Log.d(TAG, "PRINT ARRAY MAIN ACTIVITY !!!!!!!!!!!!! size = " + mVenuesList.size());
-//                for (int i = 0; i < mVenuesList.size(); i++) {
-//                    Log.d(TAG, " i = " + i + " name = " + mVenuesList.get(i).getName()
-//                            + " distance = " + mVenuesList.get(i).getDistance()
-//                            + " phone = " + mVenuesList.get(i).getBody().getPhone()
-//                            + " url = " + mVenuesList.get(i).getBody().getUrl());
-//                }
-//            }
-//        }
-//
         getListView().setOnScrollListener(this);
     }
 
     public void onEvent(EventUpdateStorage e) {
-        Log.d(TAG2, "onEvent(EventUpdateStorage e) !!!!! tid = " + Thread.currentThread().getId());
-        synchronized (mVenuesList) {
-            Log.d(TAG2, " ++++++++++++++++++++++++++++++++++++++ 1 tid = " + Thread.currentThread().getId());
-            ArrayList<FSVenue> newPage = mDataManager.getNewPage(PAG_SIZE);
-            if (null != newPage) {
-                Log.d(TAG2, " ++++++++++++++++++++++++++++++++++++++ 2 tid = " + Thread.currentThread().getId());
-                Log.d(TAG2, " mVenuesList.addAll(newPage) size = " + newPage.size());
-                if (!isUpdated) {
-                    mVenuesList.clear();
-                    isUpdated = true;
-                }
-                mVenuesList.addAll(newPage);
+        Log.d(TAG, "onEvent(EventUpdateStorage e) !!!!! tid = " + Thread.currentThread().getId());
+        synchronized (mAdapter) {
+//            ArrayList<FSVenue> newPage = mDataManager.getNewPage(PAGE_SIZE);
+            mNewPage = mDataManager.getNewPage(PAGE_SIZE);
+            if (null != mNewPage) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!isUpdated) {
+                            mAdapter.clear();
+                            isUpdated = true;
+                        }
+                        if (null != mNewPage) {
+                            mAdapter.addAll(mNewPage);
+                        }
+                    }
+                });
+                Log.d(TAG, " mAdapter.addAll(newPage) size = " + mNewPage.size());
             } else {
+                Log.d(TAG, "newPage is null");
 
-                Log.d(TAG2, " ++++++++++++++++++++++++++++++++++++++ 3 tid = " + Thread.currentThread().getId());
-                Log.d(TAG2, "newPage is null");
                 mMoreDataAvailable = false;
                 getListView().removeFooterView(mFooterView);
             }
-            Log.d(TAG2, " ++++++++++++++++++++++++++++++++++++++ 4 tid = " + Thread.currentThread().getId());
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mAdapter.notifyDataSetChanged();
-                }
-            });
-            Log.d(TAG2, " ++++++++++++++++++++++++++++++++++++++ 5 tid = " + Thread.currentThread().getId());
+
             mIsLoading = false;
-            Log.d(TAG2, "mIsLoading set false ====== tid = " + Thread.currentThread().getId());
-//        mIsLoading = false;
-//        Log.d(TAG2, "mIsLoading set false ====== tid = " + Thread.currentThread().getId());
-//        Log.d(TAG2, "onEvent(EventUpdateStorage e) !!!!! tid = " + Thread.currentThread().getId());
-//
-//        synchronized (mVenuesList) {
-//            mVenuesList = mDataManager.getNewPage(PAG_SIZE);
-//        }
-//        isUpdated = true;
-//        showList();
+            Log.d(TAG, "mIsLoading set false ====== tid = " + Thread.currentThread().getId());
         }
     }
 
     public void onEvent(EventNotUpdateStorage e) {
-        Log.d(TAG2, "onEvent(EventNotUpdateStorage e) !!!!! tid = " + Thread.currentThread().getId());
-        synchronized (mVenuesList) {
-            Log.d(TAG2, " ++++++++++++++++++++++++++++++++++++++ 1 tid = " + Thread.currentThread().getId());
-            ArrayList<FSVenue> newPage = mDataManager.getNewPage(PAG_SIZE);
-            if (null != newPage) {
-                Log.d(TAG2, " ++++++++++++++++++++++++++++++++++++++ 2 tid = " + Thread.currentThread().getId());
-                Log.d(TAG2, " mVenuesList.addAll(newPage) size = " + newPage.size());
-                mVenuesList.addAll(newPage);
+        Log.d(TAG, "onEvent(EventNotUpdateStorage e) !!!!! tid = " + Thread.currentThread().getId());
+        synchronized (mAdapter) {
+//            ArrayList<FSVenue> newPage = mDataManager.getNewPage(PAGE_SIZE);
+            mNewPage = mDataManager.getNewPage(PAGE_SIZE);
+            if (null != mNewPage) {
+                Log.d(TAG, " mVenuesList.addAll(newPage) size = " + mNewPage.size());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (null != mNewPage) {
+                            mAdapter.addAll(mNewPage);
+                        }
+                    }
+                });
             } else {
-
-                Log.d(TAG2, " ++++++++++++++++++++++++++++++++++++++ 3 tid = " + Thread.currentThread().getId());
-                Log.d(TAG2, "newPage is null");
+                Log.d(TAG, "newPage is null");
                 mMoreDataAvailable = false;
                 getListView().removeFooterView(mFooterView);
             }
-            Log.d(TAG2, " ++++++++++++++++++++++++++++++++++++++ 4 tid = " + Thread.currentThread().getId());
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mAdapter.notifyDataSetChanged();
-                }
-            });
-            Log.d(TAG2, " ++++++++++++++++++++++++++++++++++++++ 5 tid = " + Thread.currentThread().getId());
+            Log.d(TAG, " ++++++++++++++++++++++++++++++++++++++ 4 tid = " + Thread.currentThread().getId());
+
             mIsLoading = false;
-            Log.d(TAG2, "mIsLoading set false ====== tid = " + Thread.currentThread().getId());
+            Log.d(TAG, "mIsLoading set false ====== tid = " + Thread.currentThread().getId());
         }
     }
 
@@ -164,56 +137,30 @@ public class MainActivity extends ListActivity implements AbsListView.OnScrollLi
 
     @Override
     public void onScrollStateChanged(AbsListView view, int scrollState) {
-//        Log.d(TAG, "onScrollStateChanged scrollState = " + scrollState);
 
     }
 
     @Override
     public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
 //        Log.d(TAG, "onScroll firstVisibleItem = " + firstVisibleItem + " visibleItemCount = " + visibleItemCount + " totalItemCount = " + totalItemCount);
-        Log.d(TAG2, "111 mIsLoading = " + mIsLoading + " mMoreDataAvailable = " + mMoreDataAvailable + "====== tid = " + Thread.currentThread().getId());
+//        Log.d(TAG, "111 mIsLoading = " + mIsLoading + " mMoreDataAvailable = " + mMoreDataAvailable + "====== tid = " + Thread.currentThread().getId());
         if (!mIsLoading && mMoreDataAvailable) {
-//            if (totalItemCount >= MAXIMUM_ITEMS) {
-//                Log.d(TAG2, "onScroll - totalItemCount >= MAXIMUM_ITEMS");
-//                mMoreDataAvailable = false;
-//                getListView().removeFooterView(mFooterView);
-//            } else
-            Log.d(TAG2, "111 totalItemCount = " + totalItemCount
-                    + " AUTOLOAD_THRESHOLD = " + AUTOLOAD_THRESHOLD
-                    + " firstVisibleItem = " + firstVisibleItem
-                    + " visibleItemCount = " + visibleItemCount
-                    + " totalItemCount - AUTOLOAD_THRESHOLD = " + (totalItemCount - AUTOLOAD_THRESHOLD)
-                    + " firstVisibleItem + visibleItemCoun = " + (firstVisibleItem + visibleItemCount));
+//            Log.d(TAG, "111 totalItemCount = " + totalItemCount
+//                    + " AUTOLOAD_THRESHOLD = " + AUTOLOAD_THRESHOLD
+//                    + " firstVisibleItem = " + firstVisibleItem
+//                    + " visibleItemCount = " + visibleItemCount
+//                    + " totalItemCount - AUTOLOAD_THRESHOLD = " + (totalItemCount - AUTOLOAD_THRESHOLD)
+//                    + " firstVisibleItem + visibleItemCoun = " + (firstVisibleItem + visibleItemCount));
 
             if (totalItemCount - AUTOLOAD_THRESHOLD <= firstVisibleItem + visibleItemCount) {
-
-                Log.d(TAG2, "onScroll - refresh");
+                Log.d(TAG, "onScroll - refresh");
                 mIsLoading = true;
-                Log.d(TAG2, "mIsLoading set true ====== tid = " + Thread.currentThread().getId());
-                mDataManager.refresh(v, ll, query, PAG_SIZE);
-            } else {
-
+                Log.d(TAG, "mIsLoading set true ====== tid = " + Thread.currentThread().getId());
+                mDataManager.refresh(v, ll, query, PAGE_SIZE);
             }
         }
     }
 
-//    @Override
-//    public void onStart() {
-//        super.onStart();
-//        if (mWasLoading) {
-//            mWasLoading = false;
-//            mIsLoading = true;
-//            Log.d(TAG2, "mIsLoading set true11 ====== tid = " + Thread.currentThread().getId());
-//        }
-//    }
-//
-//    @Override
-//    public void onStop() {
-//        super.onStop();
-//        mWasLoading = mIsLoading;
-//        mIsLoading = false;
-//        Log.d(TAG2, "mIsLoading set false11 ====== tid = " + Thread.currentThread().getId());
-//    }
 }
 
 

@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">PizzaTask</string>
-    <string name="loading">Loading…</string>
+    <string name="loading">Loading...</string>
     <string name="position">position</string>
+    <string name="str_name_pizza">Pizzeria</string>
+    <string name="str_distance">Distance</string>
 </resources>
