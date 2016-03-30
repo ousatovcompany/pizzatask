@@ -1,6 +1,7 @@
 package com.example.ousatov.pizzatask;
 
 import android.Manifest;
+import android.app.ActionBar;
 import android.app.ListActivity;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
@@ -13,8 +14,11 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AbsListView;
+import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.ListView;
 import android.widget.Toast;
+import android.widget.Toolbar;
 
 import com.example.ousatov.pizzatask.events.EventErrorUpdateStorage;
 import com.example.ousatov.pizzatask.events.EventNotNeededUpdateStorage;
@@ -38,6 +42,8 @@ public class MainActivity extends ListActivity implements AbsListView.OnScrollLi
     private View mFooterView;
     private View mHeaderView;
     private ListView mMainListView;
+    private Button mBtnRefresh;
+    private CheckBox mIsNY;
 
     private boolean isUpdated = false;
     // we will need to take the latitude and the logntitude from a certain point
@@ -50,6 +56,7 @@ public class MainActivity extends ListActivity implements AbsListView.OnScrollLi
         mBus.unregister(this);
     }
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,6 +65,26 @@ public class MainActivity extends ListActivity implements AbsListView.OnScrollLi
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
         Log.d(TAG, "Started !!!");
+        mIsNY = (CheckBox) findViewById(R.id.cb_is_ny);
+        mBtnRefresh = (Button) findViewById(R.id.btn_refresh);
+        mBtnRefresh.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "onClick ------ 2 ");
+                if (!mIsLoading) {
+                    stopWorking();
+                    startWorking();
+                } else {
+                    Log.d(TAG, "onClick ------ 2 mIsLoading = true ");
+                }
+            }
+        });
+
+        mBus.register(this);
+        mMainListView = getListView();
+
+        mAdapter = new FSVenueAdapter(this, R.layout.venue_item, mVenuesList);
+        setListAdapter(mAdapter);
 
         if (checkRequiredPermissions()) {
             Log.d(TAG, "startWorking 2 ");
@@ -100,27 +127,40 @@ public class MainActivity extends ListActivity implements AbsListView.OnScrollLi
             return true;
         }
     }
-
+    private void stopWorking() {
+        Log.d(TAG, "stopWorking () ][][][ ");
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mAdapter.clear();
+            }
+        });
+        isUpdated = false;
+        mMainListView.removeFooterView(mFooterView);
+        mFooterView = null;
+        mMainListView.removeHeaderView(mHeaderView);
+        mHeaderView = null;
+        mIsLoading = false;
+        mMoreDataAvailable = true;
+    }
     private void startWorking() {
-        mMainListView = getListView();
+        Log.d(TAG, "start [][][] Working () ][][][ ");
         mDataManager = new DataManager(this);
+
         mHeaderView = LayoutInflater.from(this).inflate(R.layout.header_view, null);
         mMainListView.addHeaderView(mHeaderView);
-        mAdapter = new FSVenueAdapter(this, R.layout.venue_item, mVenuesList);
-        setListAdapter(mAdapter);
-
-        mBus.register(this);
         mNewPage = mDataManager.getСachedVenue();
         if (null != mNewPage) {
             mAdapter.addAll(mNewPage);
         }
         mFooterView = LayoutInflater.from(this).inflate(R.layout.footer_view, null);
         mMainListView.addFooterView(mFooterView, null, false);
+
         mMainListView.setOnScrollListener(this);
 
 
         mIsLoading = true;
-        mDataManager.refresh(PAGE_SIZE);
+        mDataManager.refresh(PAGE_SIZE, mIsNY.isChecked());
     }
 
     public void onEvent(EventUpdateStorage e) {
@@ -217,7 +257,7 @@ public class MainActivity extends ListActivity implements AbsListView.OnScrollLi
                 Log.d(TAG, "onScroll - refresh");
                 mIsLoading = true;
                 Log.d(TAG, "mIsLoading set true ====== tid = " + Thread.currentThread().getId());
-                mDataManager.refresh(PAGE_SIZE);
+                mDataManager.refresh(PAGE_SIZE, mIsNY.isChecked());
             }
         }
     }

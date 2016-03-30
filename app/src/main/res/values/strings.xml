@@ -4,4 +4,6 @@
     <string name="position">position</string>
     <string name="str_name_pizza">Pizzeria</string>
     <string name="str_distance">Distance</string>
+    <string name="str_btn_refresh">Refresh</string>
+    <string name="str_btn_is_ny">Is New York?</string>
 </resources>

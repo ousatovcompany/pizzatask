@@ -51,8 +51,8 @@ public class DataManager {
     private SharedPreferences mSharedPreferences;
 
 
-    private final float latitude = 40.7463956f;
-    private final float longtitude = -73.9852992f;
+    private final float NY_LATITUDE = 40.7463956f;
+    private final float NY_LONGITUDE = -73.9852992f;
     private final String v = "20160324";
     private final String query = "pizza";
 
@@ -66,7 +66,7 @@ public class DataManager {
         mGpsModule = new GPSModule(c);
     }
 
-    public synchronized void refresh(int number) {
+    public synchronized void refresh(int number, boolean isNewYork) {
 
         mLastLatitude = mSharedPreferences.getFloat(KEY_TO_LATITUDE, 0.0f);
         mLastLongitude = mSharedPreferences.getFloat(KEY_TO_LONGITUDE, 0.0f);
@@ -78,8 +78,10 @@ public class DataManager {
             mCurrenLongitude = (float)currentLocation.getLongitude();
             mCurrentLatitude = (float)currentLocation.getLatitude();
         }
-//        mCurrenLongitude = longtitude;
-//        mCurrentLatitude = latitude;
+        if (isNewYork) {
+            mCurrenLongitude = NY_LONGITUDE;
+            mCurrentLatitude = NY_LATITUDE;
+        }
         String ll = mCurrentLatitude + "," + mCurrenLongitude;
         Log.d(TAG, "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ currentLatitude = " + mCurrentLatitude);
         Log.d(TAG, "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ getLatitude = " + mCurrenLongitude);
