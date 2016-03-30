@@ -67,13 +67,23 @@ public class FSVenueReaderDbHelper extends SQLiteOpenHelper {
         db.close();
     }
 
+    public ArrayList<FSVenue> readAllVenues() {
+        Log.d(TAG, "DB readAllVenues !!!!!!!!!!!!!!!!!!!! tid = " + Thread.currentThread().getId());
+        // get reference of the FS database
+        return readFromDb(null);
+    }
+
     public ArrayList<FSVenue> readVenues(int offset, int number) {
         Log.d(TAG, "DB readVenue !!!!!!!!!!!!!!!!!!!! tid = " + Thread.currentThread().getId());
+        String limit = offset + COMMA_SEP + number;
+        return readFromDb(limit);
+    }
+
+    private ArrayList<FSVenue> readFromDb(String limit) {
         // get reference of the FS database
         SQLiteDatabase db = this.getReadableDatabase();
         String sortOrder =
                 FSContract.VenueEntry.COLUMN_VENUE_DIST + " ASC";
-        String limit = offset + COMMA_SEP + number;
         // get book query
         Cursor cursor = db.query(FSContract.VenueEntry.TABLE_NAME,
                 FSContract.VenueEntry.COLUMNS, null, null, null, null, sortOrder, limit);

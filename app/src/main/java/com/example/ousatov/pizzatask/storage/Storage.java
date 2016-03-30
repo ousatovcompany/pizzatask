@@ -36,4 +36,10 @@ public class Storage {
 
         return mDb.readVenues(offset, number);
     }
+
+    public synchronized ArrayList<FSVenue> loadAllData() {
+        Log.d(TAG, "loadAllData()" + " tid = " + Thread.currentThread().getId());
+        return mDb.readAllVenues();
+
+    }
 }

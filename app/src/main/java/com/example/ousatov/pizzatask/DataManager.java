@@ -2,10 +2,14 @@ package com.example.ousatov.pizzatask;
 
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.location.Location;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
-import com.example.ousatov.pizzatask.events.EventNotUpdateStorage;
+import com.example.ousatov.pizzatask.events.EventErrorUpdateStorage;
+import com.example.ousatov.pizzatask.events.EventNotNeededUpdateStorage;
 import com.example.ousatov.pizzatask.events.EventUpdateStorage;
 import com.example.ousatov.pizzatask.venue.FSVenue;
 import com.example.ousatov.pizzatask.networking.FSService;
@@ -16,7 +20,6 @@ import com.google.gson.JsonObject;
 import de.greenrobot.event.EventBus;
 
 import java.util.ArrayList;
-import java.util.Collections;
 
 import retrofit.GsonConverterFactory;
 import retrofit.Retrofit;
@@ -29,63 +32,78 @@ public class DataManager {
 
     final private String CLIENT_ID = "F3X4K30EJF0ES3LACQ2FRT4QWMJGGRNFRGWCCEWXR2O4HTRG";
     final private String CLIENT_SECRET = "UBVEJPUF0532QUMMBBVQTPNDA5MMUCKJFFHGHQPISUNBLABV";
-    private final int MAX_LIMIT = 19;
 
-    final private int SORT_BY_DISTANCE = 1;
+    private final float DEVIATION = 0.1f;
+    private float mLastLatitude;
+    private float mLastLongitude;
+    private float mCurrentLatitude;
+    private float mCurrenLongitude;
+
+    private static final String KEY_TO_LATITUDE = "KEY_TO_LATITUDE_US";
+    private static final String KEY_TO_LONGITUDE = "KEY_TO_LONGITUDE_US";
+    private final int SORT_BY_DISTANCE = 1;
     private Storage mStorage;
     private FSService mFsService;
     private int mCount;
+    private GPSModule mGpsModule;
     private boolean isFirstRefresh;
     private EventBus mBus = EventBus.getDefault();
+    private SharedPreferences mSharedPreferences;
+
+
+    private final float latitude = 40.7463956f;
+    private final float longtitude = -73.9852992f;
+    private final String v = "20160324";
+    private final String query = "pizza";
+
 
     DataManager(Context c) {
         mStorage = new Storage(c);
         mFsService = createRetrofitService(FSService.class, FSService.FS_SERVER_BASE_URL);
         mCount = 0;
         isFirstRefresh = true;
+        mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(c);
+        mGpsModule = new GPSModule(c);
     }
 
-    public ArrayList<FSVenue> getСachedVenue(int number) {
-        Log.d(TAG, "getСachedVenue!!!");
-        ArrayList<FSVenue> list = mStorage.loadData(0, number);
-        if (null != list) {
-            Log.d(TAG, "getСachedVenue list is ok!!!");
-            mCount = list.size();
+    public synchronized void refresh(int number) {
+
+        mLastLatitude = mSharedPreferences.getFloat(KEY_TO_LATITUDE, 0.0f);
+        mLastLongitude = mSharedPreferences.getFloat(KEY_TO_LONGITUDE, 0.0f);
+        mCurrentLatitude = 0.0f;
+        mCurrenLongitude = 0.0f;
+
+        Location currentLocation = mGpsModule.getLocation();
+        if (null != currentLocation) {
+            mCurrenLongitude = (float)currentLocation.getLongitude();
+            mCurrentLatitude = (float)currentLocation.getLatitude();
         }
-        Log.d(TAG, "getСachedVenue list is null!!!");
-        return list;
-    }
+//        mCurrenLongitude = longtitude;
+//        mCurrentLatitude = latitude;
+        String ll = mCurrentLatitude + "," + mCurrenLongitude;
+        Log.d(TAG, "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ currentLatitude = " + mCurrentLatitude);
+        Log.d(TAG, "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ getLatitude = " + mCurrenLongitude);
+        Log.d(TAG, "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ mLastLatitude = " + mLastLatitude);
+        Log.d(TAG, "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ mLastLongitude = " + mLastLongitude);
 
-//    public ArrayList<FSVenue> getUpdatedVenue(int number) {
-//        ArrayList<FSVenue> list = mStorage.loadData(0, number);
-//        if (null != list) {
-//            mCount = list.size();
-//        }
-//        return list;
-//    }
-
-    public synchronized ArrayList<FSVenue> getNewPage(int number) {
-        Log.d(TAG, "getNewPage mCount = " + mCount);
-        ArrayList<FSVenue> list = mStorage.loadData(mCount, number);
-        if (null != list) {
-            mCount += list.size();// - mCount;
-            for (int i = 0;i < list.size(); i++) {
-                Log.d(TAG, "getNewPage i = " + i + " dist = " + list.get(i).getDistance());
-            }
-        }
-        Log.d(TAG, "getNewPage2 mCount = " + mCount);
-        return list;
-    }
-
-    public synchronized void refresh(String version, String ll, String query, int number) {
         int tmp;
         if (isFirstRefresh) {
             tmp = 0;
         } else {
             tmp = mCount;
         }
+        if (isFirstRefresh && !isNeedRefresh(mLastLongitude, mLastLatitude, mCurrenLongitude, mCurrentLatitude)) {
+            mBus.post(new EventNotNeededUpdateStorage());
+            isFirstRefresh = false;
+            return;
+        }
+//        SharedPreferences.Editor editor =  mSharedPreferences.edit();
+//        editor.putFloat(KEY_TO_LATITUDE, 0.0f)
+//                .putFloat(KEY_TO_LONGITUDE, 0.0f)
+//                .apply();
         Log.d(TAG, "refresh() start offset = " + tmp + " number = " + number + " tid = " + Thread.currentThread().getId());
-        mFsService.getVenues(CLIENT_ID, CLIENT_SECRET, version, ll, query, tmp, number, SORT_BY_DISTANCE)
+        Log.d(TAG, " IS NEEDED  ==== " + isNeedRefresh(mLastLongitude, mLastLatitude, mCurrenLongitude, mCurrentLatitude));
+        mFsService.getVenues(CLIENT_ID, CLIENT_SECRET, v, ll, query, tmp, number, SORT_BY_DISTANCE)
                 .subscribeOn(Schedulers.from(AsyncTask.THREAD_POOL_EXECUTOR))
                 .observeOn(Schedulers.from(AsyncTask.THREAD_POOL_EXECUTOR))
                 .subscribe(new Subscriber<JsonObject>() {
@@ -100,7 +118,7 @@ public class DataManager {
                     @Override
                     public void onError(Throwable e) {
                         Log.d(TAG, "onError() called " + e.getMessage() + " tid = " + Thread.currentThread().getId());
-                        mBus.post(new EventNotUpdateStorage());
+                        mBus.post(new EventErrorUpdateStorage());
                     }
 
                     @Override
@@ -128,6 +146,10 @@ public class DataManager {
                         isFirstRefresh = false;
 
                         mStorage.saveData(fsVenues);
+                        SharedPreferences.Editor editor = mSharedPreferences.edit();
+                        editor.putFloat(KEY_TO_LATITUDE, mCurrentLatitude)
+                                .putFloat(KEY_TO_LONGITUDE, mCurrenLongitude)
+                                .apply();
                         //TODO: push event
                     }
                 });
@@ -142,6 +164,40 @@ public class DataManager {
                 .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
                 .build();
         return retrofit.create(clazz);
+    }
+
+    public ArrayList<FSVenue> getСachedVenue() {
+        Log.d(TAG, "getСachedVenue!!!");
+        ArrayList<FSVenue> list = mStorage.loadAllData();
+        if (null != list) {
+            Log.d(TAG, "getСachedVenue list is ok!!! size = " + list.size());
+            mCount = list.size();
+        }
+        Log.d(TAG, "getСachedVenue list is null!!!");
+        return list;
+    }
+
+    public synchronized ArrayList<FSVenue> getNewPage(int number) {
+        Log.d(TAG, "getNewPage mCount = " + mCount);
+        ArrayList<FSVenue> list = mStorage.loadData(mCount, number);
+        if (null != list) {
+            mCount += list.size();// - mCount;
+            for (int i = 0;i < list.size(); i++) {
+                Log.d(TAG, "getNewPage i = " + i + " dist = " + list.get(i).getDistance());
+            }
+        }
+        Log.d(TAG, "getNewPage2 mCount = " + mCount);
+        return list;
+    }
+
+    private boolean isNeedRefresh(float lastLong, float lastLat, float curLong, float curLat) {
+        if (lastLat == 0.0f && lastLong == 0.0f) {
+            return true;
+        }
+        if ((Math.abs(lastLat - curLat) > DEVIATION) || (Math.abs(lastLong - curLong) > DEVIATION)) {
+            return true;
+        }
+        return false;
     }
 
     private ArrayList<FSVenue> parseFSresponse(JsonObject response) {

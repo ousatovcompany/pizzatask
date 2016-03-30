@@ -11,13 +11,15 @@
         android:layout_marginTop="5dp"
         android:text="@string/str_name_pizza"
         android:textColor="@android:color/holo_orange_dark"
-        android:textSize="20sp">
+        android:textSize="20sp"
+        android:textAppearance="?android:attr/textAppearanceMedium">
     </TextView>
     <TextView
         android:layout_width="0dp"
         android:layout_height="fill_parent"
         android:textColor="@android:color/holo_orange_dark"
-        android:layout_weight="0.2"
-        android:text="@string/str_distance">
+        android:layout_weight="0.33"
+        android:text="@string/str_distance"
+        android:textAppearance="?android:attr/textAppearanceMedium">
     </TextView>
 </LinearLayout>
