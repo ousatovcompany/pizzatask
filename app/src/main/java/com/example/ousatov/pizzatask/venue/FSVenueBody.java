@@ -6,13 +6,11 @@ import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
 
 public class FSVenueBody {
-    private static final String TAG = "US";
-
-    private String mPhone;
+    private String mRating;
     private String mUrl;
 
     public FSVenueBody() {
-        mPhone = null;
+        mRating = null;
         mUrl = null;
     }
 
@@ -20,12 +18,12 @@ public class FSVenueBody {
         this.deserializeFsBody(json);
     }
 
-    public String getPhone() {
-        return mPhone;
+    public String getRating() {
+        return mRating;
     }
 
-    public void setPhone(String p) {
-        mPhone = p;
+    public void setRating(String r) {
+        mRating = r;
     }
 
     public String getUrl() {
@@ -38,7 +36,6 @@ public class FSVenueBody {
 
     public String serializeFsBody() {
         Gson gs = new Gson();
-
         return gs.toJson(this);
     }
 
@@ -46,7 +43,7 @@ public class FSVenueBody {
         Gson gs = new Gson();
         Type type = new TypeToken<FSVenueBody>() {}.getType();
         FSVenueBody body = gs.fromJson(json, type);
-        this.mPhone = body.getPhone();
-        this.mUrl = body.getUrl();
+        mRating = body.getRating();
+        mUrl = body.getUrl();
     }
 }

@@ -2,24 +2,23 @@
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="horizontal">
-    <TextView
+    android:layout_height="72dp"
+    android:orientation="horizontal"
+    android:minHeight="72dp"
+    android:padding="16dp"
+    >
+    <TextView style="@style/AppTheme.MyHeadersStyle"
         android:layout_width="0dp"
-        android:layout_height="fill_parent"
+        android:layout_height="match_parent"
         android:layout_weight="1"
-        android:layout_marginTop="5dp"
         android:text="@string/str_name_pizza"
-        android:textColor="@android:color/holo_orange_dark"
-        android:textSize="20sp"
-        android:textAppearance="?android:attr/textAppearanceMedium">
+        android:gravity="center_vertical">
     </TextView>
-    <TextView
+    <TextView style="@style/AppTheme.MyHeadersStyle"
         android:layout_width="0dp"
-        android:layout_height="fill_parent"
-        android:textColor="@android:color/holo_orange_dark"
+        android:layout_height="match_parent"
         android:layout_weight="0.33"
         android:text="@string/str_distance"
-        android:textAppearance="?android:attr/textAppearanceMedium">
+        android:gravity="center_vertical|right">
     </TextView>
 </LinearLayout>

@@ -39,4 +39,5 @@ public class FSVenueAdapter extends ArrayAdapter<FSVenue> {
         }
         return view;
     }
+
 }

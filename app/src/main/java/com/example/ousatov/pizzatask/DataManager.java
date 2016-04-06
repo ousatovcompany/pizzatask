@@ -8,6 +8,7 @@ import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
+import com.example.ousatov.pizzatask.events.EventErrorGetLocation;
 import com.example.ousatov.pizzatask.events.EventErrorUpdateStorage;
 import com.example.ousatov.pizzatask.events.EventNotNeededUpdateStorage;
 import com.example.ousatov.pizzatask.events.EventUpdateStorage;
@@ -20,6 +21,7 @@ import com.google.gson.JsonObject;
 import de.greenrobot.event.EventBus;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 
 import retrofit.GsonConverterFactory;
 import retrofit.Retrofit;
@@ -30,18 +32,23 @@ import rx.schedulers.Schedulers;
 public class DataManager {
     private static final String TAG = "US";
 
+    private static final String KEY_TO_LATITUDE = "KEY_TO_LATITUDE_US";
+    private static final String KEY_TO_LONGITUDE = "KEY_TO_LONGITUDE_US";
+
     final private String CLIENT_ID = "F3X4K30EJF0ES3LACQ2FRT4QWMJGGRNFRGWCCEWXR2O4HTRG";
     final private String CLIENT_SECRET = "UBVEJPUF0532QUMMBBVQTPNDA5MMUCKJFFHGHQPISUNBLABV";
+    private final int SORT_BY_DISTANCE = 1;
+    private final String QUERY = "pizza";
 
     private final float DEVIATION = 0.1f;
     private float mLastLatitude;
     private float mLastLongitude;
     private float mCurrentLatitude;
     private float mCurrenLongitude;
+    private final float NY_LATITUDE = 40.7463956f;
+    private final float NY_LONGITUDE = -73.9852992f;
+    private String mVersion;
 
-    private static final String KEY_TO_LATITUDE = "KEY_TO_LATITUDE_US";
-    private static final String KEY_TO_LONGITUDE = "KEY_TO_LONGITUDE_US";
-    private final int SORT_BY_DISTANCE = 1;
     private Storage mStorage;
     private FSService mFsService;
     private int mCount;
@@ -51,12 +58,6 @@ public class DataManager {
     private SharedPreferences mSharedPreferences;
 
 
-    private final float NY_LATITUDE = 40.7463956f;
-    private final float NY_LONGITUDE = -73.9852992f;
-    private final String v = "20160324";
-    private final String query = "pizza";
-
-
     DataManager(Context c) {
         mStorage = new Storage(c);
         mFsService = createRetrofitService(FSService.class, FSService.FS_SERVER_BASE_URL);
@@ -64,48 +65,63 @@ public class DataManager {
         isFirstRefresh = true;
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(c);
         mGpsModule = new GPSModule(c);
+        Calendar calendar = Calendar.getInstance();
+        int year = calendar.get(Calendar.YEAR);
+        int month = calendar.get(Calendar.MONTH) + 1;
+        int day = calendar.get(Calendar.DATE);
+        mVersion = year + "";
+        if (month < 10) {
+            mVersion += 0 + "" + month;
+        } else {
+            mVersion += "" + month;
+        }
+        if (day < 10) {
+            mVersion += 0 + "" + day;
+        } else {
+            mVersion += "" + day;
+        }
+    }
+    public void clearInformation() {
+        mCount = 0;
+        isFirstRefresh = true;
     }
 
     public synchronized void refresh(int number, boolean isNewYork) {
-
         mLastLatitude = mSharedPreferences.getFloat(KEY_TO_LATITUDE, 0.0f);
         mLastLongitude = mSharedPreferences.getFloat(KEY_TO_LONGITUDE, 0.0f);
         mCurrentLatitude = 0.0f;
         mCurrenLongitude = 0.0f;
-
-        Location currentLocation = mGpsModule.getLocation();
-        if (null != currentLocation) {
-            mCurrenLongitude = (float)currentLocation.getLongitude();
-            mCurrentLatitude = (float)currentLocation.getLatitude();
-        }
         if (isNewYork) {
             mCurrenLongitude = NY_LONGITUDE;
             mCurrentLatitude = NY_LATITUDE;
+        } else {
+            Location currentLocation = mGpsModule.getLocation();
+            if (null != currentLocation) {
+                mCurrenLongitude = (float) currentLocation.getLongitude();
+                mCurrentLatitude = (float) currentLocation.getLatitude();
+            } else {
+                mBus.post(new EventErrorGetLocation());
+                return;
+            }
         }
         String ll = mCurrentLatitude + "," + mCurrenLongitude;
-        Log.d(TAG, "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ currentLatitude = " + mCurrentLatitude);
-        Log.d(TAG, "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ getLatitude = " + mCurrenLongitude);
-        Log.d(TAG, "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ mLastLatitude = " + mLastLatitude);
-        Log.d(TAG, "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ mLastLongitude = " + mLastLongitude);
-
-        int tmp;
+        int offsetOnServer;
         if (isFirstRefresh) {
-            tmp = 0;
+            offsetOnServer = 0;
         } else {
-            tmp = mCount;
+            offsetOnServer = mCount;
         }
-        if (isFirstRefresh && !isNeedRefresh(mLastLongitude, mLastLatitude, mCurrenLongitude, mCurrentLatitude)) {
+        if (isFirstRefresh && !isNeedRefreshOfCoord(mLastLongitude, mLastLatitude, mCurrenLongitude, mCurrentLatitude)) {
             mBus.post(new EventNotNeededUpdateStorage());
             isFirstRefresh = false;
             return;
         }
-//        SharedPreferences.Editor editor =  mSharedPreferences.edit();
-//        editor.putFloat(KEY_TO_LATITUDE, 0.0f)
-//                .putFloat(KEY_TO_LONGITUDE, 0.0f)
-//                .apply();
-        Log.d(TAG, "refresh() start offset = " + tmp + " number = " + number + " tid = " + Thread.currentThread().getId());
-        Log.d(TAG, " IS NEEDED  ==== " + isNeedRefresh(mLastLongitude, mLastLatitude, mCurrenLongitude, mCurrentLatitude));
-        mFsService.getVenues(CLIENT_ID, CLIENT_SECRET, v, ll, query, tmp, number, SORT_BY_DISTANCE)
+
+        Log.d(TAG, "mCurrentLatitude = " + mCurrentLatitude);
+        Log.d(TAG, "mCurrenLongitude = " + mCurrenLongitude);
+        Log.d(TAG, "refresh() start offset = " + offsetOnServer + " number = " + number + " tid = " + Thread.currentThread().getId());
+        Log.d(TAG, " Is Coordinate changed = " + isNeedRefreshOfCoord(mLastLongitude, mLastLatitude, mCurrenLongitude, mCurrentLatitude));
+        mFsService.getVenues(CLIENT_ID, CLIENT_SECRET, mVersion, ll, QUERY, offsetOnServer, number, SORT_BY_DISTANCE)
                 .subscribeOn(Schedulers.from(AsyncTask.THREAD_POOL_EXECUTOR))
                 .observeOn(Schedulers.from(AsyncTask.THREAD_POOL_EXECUTOR))
                 .subscribe(new Subscriber<JsonObject>() {
@@ -113,7 +129,6 @@ public class DataManager {
                     public void onCompleted() {
                         Log.d(TAG, "onCompleted() tid = " + Thread.currentThread().getId());
                         Log.d(TAG, "mBus.post(new EventUpdateStorage()) !!!!! tid = " + Thread.currentThread().getId());
-
                         mBus.post(new EventUpdateStorage());
                     }
 
@@ -129,33 +144,23 @@ public class DataManager {
 
                         ArrayList<FSVenue> fsVenues = parseFSresponse(jsonObject);
 
-
-//                        Collections.sort(fsVenues, new FSDistanceComparator());
-                        Log.d(TAG, "PRINT ARRAY !!!!!!!!!!!!! size = " + fsVenues.size());
-                        for (int i = 0; i < fsVenues.size(); i++) {
-                            Log.d(TAG, " i = " + i + " name = " + fsVenues.get(i).getName()
-                                    + " distance = " + fsVenues.get(i).getDistance()
-                                    + " phone = " + fsVenues.get(i).getBody().getPhone()
-                                    + " url = " + fsVenues.get(i).getBody().getUrl());
-
-                        }
+                        //Collections.sort(fsVenues, new FSDistanceComparator());
 
                         if (isFirstRefresh) {
-                            Log.d(TAG, "isFirstRefresh mCount = " + mCount);
                             mStorage.clearTable();
                             mCount = 0;
                         }
                         isFirstRefresh = false;
 
                         mStorage.saveData(fsVenues);
+                        Log.d(TAG, "SAVE mCurrentLatitude = " + mCurrentLatitude);
+                        Log.d(TAG, "SAVE mCurrenLongitude = " + mCurrenLongitude);
                         SharedPreferences.Editor editor = mSharedPreferences.edit();
                         editor.putFloat(KEY_TO_LATITUDE, mCurrentLatitude)
                                 .putFloat(KEY_TO_LONGITUDE, mCurrenLongitude)
                                 .apply();
-                        //TODO: push event
                     }
                 });
-        Log.d(TAG, "refresh() end" + " tid = " + Thread.currentThread().getId());
     }
 
     private <T> T createRetrofitService(final Class<T> clazz, final String endPoint) {
@@ -169,30 +174,26 @@ public class DataManager {
     }
 
     public ArrayList<FSVenue> getСachedVenue() {
-        Log.d(TAG, "getСachedVenue!!!");
         ArrayList<FSVenue> list = mStorage.loadAllData();
         if (null != list) {
             Log.d(TAG, "getСachedVenue list is ok!!! size = " + list.size());
             mCount = list.size();
         }
-        Log.d(TAG, "getСachedVenue list is null!!!");
         return list;
     }
 
     public synchronized ArrayList<FSVenue> getNewPage(int number) {
-        Log.d(TAG, "getNewPage mCount = " + mCount);
         ArrayList<FSVenue> list = mStorage.loadData(mCount, number);
         if (null != list) {
-            mCount += list.size();// - mCount;
-            for (int i = 0;i < list.size(); i++) {
+            mCount += list.size();
+            for (int i = 0; i < list.size(); i++) {
                 Log.d(TAG, "getNewPage i = " + i + " dist = " + list.get(i).getDistance());
             }
         }
-        Log.d(TAG, "getNewPage2 mCount = " + mCount);
         return list;
     }
 
-    private boolean isNeedRefresh(float lastLong, float lastLat, float curLong, float curLat) {
+    private boolean isNeedRefreshOfCoord(float lastLong, float lastLat, float curLong, float curLat) {
         if (lastLat == 0.0f && lastLong == 0.0f) {
             return true;
         }
@@ -204,7 +205,6 @@ public class DataManager {
 
     private ArrayList<FSVenue> parseFSresponse(JsonObject response) {
         ArrayList<FSVenue> temp = new ArrayList<FSVenue>();
-
         JsonObject jsonObj;
         JsonArray jsonArray;
         if (response.has("response")) {
@@ -222,8 +222,8 @@ public class DataManager {
                             if (jsonObj.has("location")) {
                                 if (jsonObj.getAsJsonObject("location").has("distance")) {
                                     obj.setDistance(jsonObj.getAsJsonObject("location").get("distance").getAsInt());
-                                    if (jsonObj.has("phone")) {
-                                        obj.getBody().setPhone(jsonObj.get("phone").getAsString());
+                                    if (jsonObj.has("rating")) {
+                                        obj.getBody().setRating(jsonObj.get("rating").getAsString());
                                     }
                                     if (jsonObj.has("url")) {
                                         obj.getBody().setUrl(jsonObj.get("url").getAsString());

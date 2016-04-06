@@ -69,7 +69,7 @@
 //                for (int i = 0; i < mVenuesList.size(); i++) {
 //                    Log.d(TAG, " i = " + i + " name = " + mVenuesList.get(i).getName()
 //                            + " distance = " + mVenuesList.get(i).getDistance()
-//                            + " phone = " + mVenuesList.get(i).getBody().getPhone()
+//                            + " phone = " + mVenuesList.get(i).getBody().getRating()
 //                            + " url = " + mVenuesList.get(i).getBody().getUrl());
 //                }
 //            }

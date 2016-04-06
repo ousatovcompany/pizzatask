@@ -32,20 +32,20 @@ public class FSVenueReaderDbHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        Log.d(TAG, "DB onCreate !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! tid = " + Thread.currentThread().getId());
+        Log.d(TAG, "DB onCreate");
         db.execSQL(CREATE_TABLE);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        Log.d(TAG, "DB onUpgrade !!!!!!!!! tid = " + Thread.currentThread().getId());
+        Log.d(TAG, "DB onUpgrade");
         // drop books table if already exists
         db.execSQL(DELETE_TABLE);
         db.execSQL(CREATE_TABLE);
     }
 
     public void deleteOldTable() {
-        Log.d(TAG, "deleteOldTable()  tid = " + Thread.currentThread().getId());
+        Log.d(TAG, "deleteOldTable()");
         SQLiteDatabase db = this.getReadableDatabase();
         db.execSQL(DELETE_TABLE);
         db.execSQL(CREATE_TABLE);
@@ -68,13 +68,13 @@ public class FSVenueReaderDbHelper extends SQLiteOpenHelper {
     }
 
     public ArrayList<FSVenue> readAllVenues() {
-        Log.d(TAG, "DB readAllVenues !!!!!!!!!!!!!!!!!!!! tid = " + Thread.currentThread().getId());
+        Log.d(TAG, "DB readAllVenues");
         // get reference of the FS database
         return readFromDb(null);
     }
 
     public ArrayList<FSVenue> readVenues(int offset, int number) {
-        Log.d(TAG, "DB readVenue !!!!!!!!!!!!!!!!!!!! tid = " + Thread.currentThread().getId());
+        Log.d(TAG, "DB readVenue");
         String limit = offset + COMMA_SEP + number;
         return readFromDb(limit);
     }
