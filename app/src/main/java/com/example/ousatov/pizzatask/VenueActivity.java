@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Html;
+import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.widget.TextView;
 
@@ -19,14 +20,12 @@ public class VenueActivity extends Activity {
         setContentView(R.layout.activity_single_venue);
         Intent intent = getIntent();
         TextView tvPhone = (TextView) findViewById(R.id.tvRating);
-        Log.d(TAG, "777777777777777777                tvPhone   = " + tvPhone.getText());
         tvPhone.setText(intent.getStringExtra(KEY_TO_RATING));
-        Log.d(TAG, "777777777777777777                tvPhone   = " + tvPhone.getText());
-        Log.d(TAG, "777777777777777777                onCreate      7777777777777777");
 
-        Log.d(TAG, "777777777777777777                tvUrl   = " + intent.getStringExtra(KEY_TO_URL));
+        Log.d(TAG, "tvUrl   = " + intent.getStringExtra(KEY_TO_URL));
         TextView tvUrl = (TextView) findViewById(R.id.tvUrl);
-//        tvUrl.setMovementMethod(LinkMovementMethod.getInstance());
+
+        tvUrl.setMovementMethod(LinkMovementMethod.getInstance());
 //        tvUrl.setText(intent.getStringExtra(KEY_TO_URL));
         tvUrl.setText(Html.fromHtml("<a href=" + intent.getStringExtra(KEY_TO_URL) + ">" + intent.getStringExtra(KEY_TO_URL) + "</a>"));
     }

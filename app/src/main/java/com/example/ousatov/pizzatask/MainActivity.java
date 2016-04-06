@@ -156,13 +156,15 @@ public class MainActivity extends ListActivity implements AbsListView.OnScrollLi
 
     @Override
     protected void onListItemClick(ListView l, View v, int position, long id) {
-        Log.d(TAG, "onListItemClick()");
+        Log.d(TAG, "onListItemClick() position = " + position);
         super.onListItemClick(l, v, position, id);
-        FSVenue clickedVenue = (FSVenue) getListAdapter().getItem(position - 1);
-        Intent intent = new Intent(this, VenueActivity.class);
-        intent.putExtra(VenueActivity.KEY_TO_RATING, clickedVenue.getBody().getRating());
-        intent.putExtra(VenueActivity.KEY_TO_URL, clickedVenue.getBody().getUrl());
-        startActivity(intent);
+        if (position > 0) {
+            FSVenue clickedVenue = (FSVenue) getListAdapter().getItem(position - 1);
+            Intent intent = new Intent(this, VenueActivity.class);
+            intent.putExtra(VenueActivity.KEY_TO_RATING, clickedVenue.getBody().getRating());
+            intent.putExtra(VenueActivity.KEY_TO_URL, clickedVenue.getBody().getUrl());
+            startActivity(intent);
+        }
     }
 
     private boolean checkRequiredPermissions() {
